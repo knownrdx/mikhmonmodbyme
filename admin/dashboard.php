@@ -6,6 +6,25 @@ $api = new Api();
 $stats = $api->getHotspotStats();
 ?>
 
+<!-- Contenu -->
+<h1><?= i18n::t('dashboard.welcome') ?></h1>
+
+<div class="kpi-card">
+    <div class="kpi-label"><?= i18n::t('dashboard.active_users') ?></div>
+    <div class="kpi-number"><?= $stats['active_users'] ?></div>
+</div>
+
+<!-- Tableau -->
+<table>
+    <thead>
+        <tr>
+            <th><?= i18n::t('users.username') ?></th>
+            <th><?= i18n::t('users.status') ?></th>
+            <th><?= i18n::t('button.delete') ?></th>
+        </tr>
+    </thead>
+</table>
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>

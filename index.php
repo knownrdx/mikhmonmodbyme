@@ -16,6 +16,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
+// Charger le système i18n
+require_once 'class/i18n.php';
+i18n::init('fr'); 
+// Charger traductions françaises
 // hide all error
 error_reporting(0);
 // check url
