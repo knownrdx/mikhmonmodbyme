@@ -320,7 +320,7 @@ date_default_timezone_set($_SESSION['timezone']);
 </div>
 <table class="table">
   <tr>
-    <td class="align-middle"><?= $_qty ?></td><td><div><input class="form-control " type="number" name="qty" min="1" max="500" value="1" required="1"></div></td>
+    <td class="align-middle"><?= $_qty ?></td><td><div><input class="form-control " type="number" name="qty" min="1" max="5000" value="1" required="1"></div></td>
   </tr>
   <tr>
     <td class="align-middle">Server</td>
