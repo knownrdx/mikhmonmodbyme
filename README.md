@@ -2,15 +2,16 @@
 
 MikroTik Hotspot Monitor — Modified version with **multi-user database system**, **RouterOS 7.x date format fix**, and **Coolify/Docker deployment** support.
 
-> Based on Mikhmon V3 by Laksamadi Guko (GPL v2)
 
 ---
 
 ## Features
 
-- **Multi-User System** — Multiple users can register and login. Each user manages their own routers independently.
-- **Admin Panel** — Admin can manage all users (add/delete) from User Management page.
-- **SQLite Database** — No more flat file config. User accounts and router sessions stored in SQLite with bcrypt password hashing.
+- **Multi-User System** — Multiple users with monthly subscription. Each user manages their own routers independently.
+- **Monthly Subscription** — Admin sets subscription period (1-12 months) per user. Expired users cannot login.
+- **Admin Panel** — Admin can manage all users, set subscription, login as any user with one click.
+- **Login As User** — Admin can click "Login" on any user to instantly access their account and switch back anytime.
+- **SQLite Database** — User accounts, subscriptions, and router sessions stored in SQLite with bcrypt password hashing.
 - **RouterOS 7.x Support** — On-login and scheduler scripts fixed for new `YYYY-MM-DD` date format.
 - **Coolify Ready** — Dockerfile + docker-compose optimized for Coolify deployment. No Bad Gateway errors.
 - All original Mikhmon V3 features: voucher management, hotspot user management, traffic monitor, reports, etc.
@@ -137,17 +138,30 @@ chmod -R 777 img/
 
 ### User Roles
 
-| Role | Permissions |
-|------|------------|
-| **Admin** | Manage all users, add/delete users, manage own routers |
-| **User** | Register, login, manage only own routers |
+| Role | UI te dekhay | Permissions |
+|------|-------------|------------|
+| **Admin** (mikhmon) | Admin | Manage all users, set subscriptions, login as any user, unlimited access |
+| **User** (paid users) | Admin | Login, manage own routers only, needs active subscription |
+
+### Subscription System
+
+- Admin user add korar somoy subscription period set kore (1/2/3/6/12 months)
+- Subscription expire hole user login korte parbe na
+- Admin jokhn icche subscription extend korte parbe
+- Extend korle current expiry date theke add hoy (expire hole today theke)
+
+### Login As User
+
+- Admin "User Management" page e jokhn kono user er "Login" button e click kore, totkhoni oi user er account e login hoye jay
+- "Switch Back" button click korle admin er account e fire ashte pare
+- Ei feature diye admin user er problem debug korte pare ba setup korte pare
 
 ### Admin User Management
 
-1. Login korun admin account diye
+1. Login korun admin account diye (default: mikhmon / 1234)
 2. **Admin Settings** page e jan
 3. **"Manage Users"** link e click korun
-4. User add/delete korte parben
+4. User add (with subscription), delete, extend subscription, login as user
 
 ---
 
@@ -245,6 +259,4 @@ mikhmon/
 
 ## License
 
-GNU General Public License v2.0 — see [LICENSE](LICENSE) file.
 
-Original Mikhmon V3 by Laksamadi Guko.

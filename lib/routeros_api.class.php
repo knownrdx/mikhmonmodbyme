@@ -460,7 +460,6 @@ function decrypt($string, $key=128) {
 }
 
 // Reformat date time MikroTik
-// by Laksamadi Guko
 
 function formatInterval($dtm){
 $val_convert = $dtm;

@@ -1,9 +1,4 @@
 <?php
-/*
- *  Mikhmon Multi-User Sessions Page
- *  Based on Mikhmon V3 by Laksamadi Guko (GPL v2)
- */
-
 error_reporting(0);
 if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
@@ -52,9 +47,36 @@ if (!isset($_SESSION["mikhmon"])) {
       <div class="card-header">
         <h3 class="card-title"><i class="fa fa-gear"></i> <?= $_admin_settings ?> &nbsp; | &nbsp;&nbsp;<i onclick="location.reload();" class="fa fa-refresh pointer " title="Reload data"></i>
         &nbsp; | &nbsp; <span class="text-blue"><i class="fa fa-user"></i> <?= htmlspecialchars($_SESSION['mikhmon']); ?></span>
-        <?php if ($_SESSION['user_role'] == 'admin'): ?>
+        <?php if ($_SESSION['user_role'] == 'admin' && !isset($_SESSION['logged_in_as'])): ?>
           <span class="text-green">(Admin)</span>
           &nbsp; | &nbsp; <a href="./admin.php?id=users"><i class="fa fa-users"></i> Manage Users</a>
+        <?php elseif ($_SESSION['user_role'] == 'user' && !isset($_SESSION['logged_in_as'])): ?>
+          <?php 
+          $myUserData = dbGetUserById($_SESSION['user_id']);
+          $daysLeft = dbGetSubDaysLeft($myUserData);
+          $rCount = dbGetRouterCount($_SESSION['user_id']);
+          $rMax = $myUserData['max_routers'];
+          ?>
+          <span class="text-blue">(Routers: <?= $rCount; ?>/<?= $rMax; ?>)</span>
+          <?php if ($daysLeft > 7): ?>
+            <span class="text-green">(Sub: <?= $daysLeft; ?>d)</span>
+          <?php elseif ($daysLeft > 0): ?>
+            <span class="text-orange">(Sub: <?= $daysLeft; ?>d!)</span>
+          <?php endif; ?>
+          &nbsp; | &nbsp; <a href="./admin.php?id=users"><i class="fa fa-users"></i> My Users</a>
+        <?php elseif (isset($_SESSION['logged_in_as'])): ?>
+          <span class="text-orange">(Viewing as <?= htmlspecialchars($_SESSION['mikhmon']); ?>)</span>
+          &nbsp; | &nbsp; <a href="./admin.php?id=switch-back" class="text-green"><i class="fa fa-arrow-left"></i> Switch Back</a>
+        <?php else: 
+          $myUserData = dbGetUserById($_SESSION['user_id']);
+          $daysLeft = dbGetSubDaysLeft($myUserData);
+          if ($daysLeft > 7): ?>
+            <span class="text-green">(Sub: <?= $daysLeft; ?> days left)</span>
+          <?php elseif ($daysLeft > 0): ?>
+            <span class="text-orange">(Sub: <?= $daysLeft; ?> days left!)</span>
+          <?php else: ?>
+            <span class="text-red">(Sub: Expired!)</span>
+          <?php endif; ?>
         <?php endif; ?>
         </h3>
       </div>

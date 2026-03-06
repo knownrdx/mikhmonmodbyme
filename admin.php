@@ -1,8 +1,4 @@
 <?php
-/*
- *  Mikhmon Multi-User Admin
- *  Based on Mikhmon V3 by Laksamadi Guko (GPL v2)
- */
 session_start();
 error_reporting(0);
 ob_start("ob_gzhandler");
@@ -16,15 +12,10 @@ $logo = $_GET['logo'];
 
 $ids = array("editor","uplogo","settings");
 
-// lang
 include('./lang/isocodelang.php');
 include('./include/lang.php');
 include('./lang/'.$langid.'.php');
-
-// quick bt
 include('./include/quickbt.php');
-
-// theme
 include('./include/theme.php');
 include('./settings/settheme.php');
 include('./settings/setlang.php');
@@ -36,18 +27,47 @@ if ($_SESSION['theme'] == "") {
     $themecolor = $_SESSION['themecolor'];
 }
 
-// load config (now uses database)
 include_once('./include/headhtml.php');
 include('./include/config.php');
 include('./include/readcfg.php');
-
 include_once('./lib/routeros_api.class.php');
 include_once('./lib/formatbytesbites.php');
 ?>
 
 <?php
+// ==================== LOGIN AS USER (token-based) ====================
+if ($id == "login-as" && isset($_GET['token'])) {
+  $tokenData = dbConsumeLoginToken($_GET['token']);
+  if ($tokenData) {
+    $targetUser = dbGetUserById($tokenData['target_user_id']);
+    if ($targetUser) {
+      $_SESSION["mikhmon"] = $targetUser['username'];
+      $_SESSION["user_id"] = $targetUser['id'];
+      $_SESSION["user_role"] = $targetUser['role'];
+      $_SESSION["logged_in_as"] = true;
+      $_SESSION["original_admin_id"] = $tokenData['admin_id'];
+      echo "<script>window.location='./admin.php?id=sessions'</script>";
+    } else {
+      echo "<script>alert('User not found');window.location='./admin.php?id=login'</script>";
+    }
+  } else {
+    echo "<script>alert('Invalid or expired token');window.location='./admin.php?id=login'</script>";
+  }
+
+// ==================== SWITCH BACK TO ADMIN ====================
+} elseif ($id == "switch-back" && isset($_SESSION['original_admin_id'])) {
+  $adminUser = dbGetUserById($_SESSION['original_admin_id']);
+  if ($adminUser && $adminUser['role'] == 'admin') {
+    $_SESSION["mikhmon"] = $adminUser['username'];
+    $_SESSION["user_id"] = $adminUser['id'];
+    $_SESSION["user_role"] = 'admin';
+    unset($_SESSION["logged_in_as"]);
+    unset($_SESSION["original_admin_id"]);
+  }
+  echo "<script>window.location='./admin.php?id=users'</script>";
+
 // ==================== LOGIN ====================
-if ($id == "login" || substr($url, -1) == "p") {
+} elseif ($id == "login" || substr($url, -1) == "p") {
 
   if (isset($_POST['login'])) {
     $user = $_POST['user'];
@@ -55,10 +75,17 @@ if ($id == "login" || substr($url, -1) == "p") {
     
     $authUser = dbAuthUser($user, $pass);
     if ($authUser) {
-      $_SESSION["mikhmon"] = $authUser['username'];
-      $_SESSION["user_id"] = $authUser['id'];
-      $_SESSION["user_role"] = $authUser['role'];
-      echo "<script>window.location='./admin.php?id=sessions'</script>";
+      // Check subscription for non-admin users
+      if ($authUser['role'] != 'admin' && !dbIsSubActive($authUser)) {
+        $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Your subscription has expired. Please contact admin.</div>';
+      } else {
+        $_SESSION["mikhmon"] = $authUser['username'];
+        $_SESSION["user_id"] = $authUser['id'];
+        $_SESSION["user_role"] = $authUser['role'];
+        unset($_SESSION["logged_in_as"]);
+        unset($_SESSION["original_admin_id"]);
+        echo "<script>window.location='./admin.php?id=sessions'</script>";
+      }
     } else {
       $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid username or password.</div>';
     }
@@ -81,9 +108,9 @@ if ($id == "login" || substr($url, -1) == "p") {
     } elseif ($newpass !== $newpass2) {
       $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Passwords do not match.</div>';
     } else {
-      $result = dbCreateUser($newuser, $newpass);
+      $result = dbCreateUser($newuser, $newpass, 'user', '', 0);
       if ($result) {
-        $success = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-success"><i class="fa fa-check"></i> Registration successful! Please login.</div>';
+        $success = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-success"><i class="fa fa-check"></i> Registration successful! Please contact admin to activate your subscription.</div>';
       } else {
         $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Username already exists.</div>';
       }
@@ -92,12 +119,36 @@ if ($id == "login" || substr($url, -1) == "p") {
 
   include_once('./include/register.php');
 
-// ==================== USER MANAGEMENT (admin only) ====================
-} elseif ($id == "users" && isset($_SESSION["mikhmon"]) && $_SESSION["user_role"] == "admin") {
+// ==================== USER MANAGEMENT (admin + sub-admin) ====================
+} elseif ($id == "users" && isset($_SESSION["mikhmon"]) && ($_SESSION["user_role"] == "admin" || $_SESSION["user_role"] == "user")) {
+  
+  // Generate login-as token
+  if (isset($_GET['login-as-user']) && $_GET['login-as-user'] != '') {
+    $targetId = (int)$_GET['login-as-user'];
+    // Sub-admin can only login-as their own subusers
+    if ($_SESSION['user_role'] == 'user') {
+      $targetUser = dbGetUserById($targetId);
+      if (!$targetUser || $targetUser['created_by'] != $_SESSION['user_id']) {
+        echo "<script>alert('Access denied');window.location='./admin.php?id=users'</script>";
+        exit;
+      }
+    }
+    $token = dbGenerateLoginToken($_SESSION['user_id'], $targetId);
+    echo "<script>window.location='./admin.php?id=login-as&token=" . $token . "'</script>";
+    exit;
+  }
   
   // Delete user
   if (isset($_GET['delete-user']) && $_GET['delete-user'] != '') {
     $delId = (int)$_GET['delete-user'];
+    // Sub-admin can only delete their own subusers
+    if ($_SESSION['user_role'] == 'user') {
+      $targetUser = dbGetUserById($delId);
+      if (!$targetUser || $targetUser['created_by'] != $_SESSION['user_id']) {
+        echo "<script>alert('Access denied');window.location='./admin.php?id=users'</script>";
+        exit;
+      }
+    }
     dbDeleteUser($delId);
     echo "<script>window.location='./admin.php?id=users'</script>";
   }
@@ -106,10 +157,43 @@ if ($id == "login" || substr($url, -1) == "p") {
   if (isset($_POST['adduser'])) {
     $newuser = trim($_POST['newuser']);
     $newpass = $_POST['newpass'];
-    $newrole = $_POST['newrole'];
     if (!empty($newuser) && !empty($newpass)) {
-      dbCreateUser($newuser, $newpass, $newrole);
+      if ($_SESSION['user_role'] == 'admin') {
+        // Admin adds sub-admin (role=user) with subscription
+        $subMonths = (int)$_POST['submonths'];
+        if ($subMonths < 1) $subMonths = 1;
+        $subExpires = date('Y-m-d', strtotime("+{$subMonths} months"));
+        $maxRouters = (int)$_POST['maxrouters'];
+        if ($maxRouters < 1) $maxRouters = 4;
+        dbCreateUser($newuser, $newpass, 'user', $subExpires, $_SESSION['user_id'], $maxRouters);
+      } else {
+        // Sub-admin adds subuser (role=subuser), no subscription needed, default 4 routers
+        dbCreateUser($newuser, $newpass, 'subuser', '', $_SESSION['user_id'], 4);
+      }
     }
+    echo "<script>window.location='./admin.php?id=users'</script>";
+  }
+
+  // Update subscription (admin only)
+  if (isset($_POST['updatesub']) && $_SESSION['user_role'] == 'admin') {
+    $subUserId = (int)$_POST['sub_user_id'];
+    $subMonths = (int)$_POST['submonths'];
+    if ($subMonths < 1) $subMonths = 1;
+    $currentUser = dbGetUserById($subUserId);
+    if ($currentUser) {
+      $baseDate = (!empty($currentUser['sub_expires']) && strtotime($currentUser['sub_expires']) > time()) ? $currentUser['sub_expires'] : date('Y-m-d');
+      $newExpiry = date('Y-m-d', strtotime($baseDate . " +{$subMonths} months"));
+      dbUpdateSubscription($subUserId, $newExpiry);
+    }
+    echo "<script>window.location='./admin.php?id=users'</script>";
+  }
+
+  // Update max routers (admin only)
+  if (isset($_POST['updaterouters']) && $_SESSION['user_role'] == 'admin') {
+    $routerUserId = (int)$_POST['router_user_id'];
+    $newMax = (int)$_POST['newmaxrouters'];
+    if ($newMax < 1) $newMax = 1;
+    dbUpdateMaxRouters($routerUserId, $newMax);
     echo "<script>window.location='./admin.php?id=users'</script>";
   }
   
@@ -122,8 +206,15 @@ if ($id == "login" || substr($url, -1) == "p") {
 } elseif (substr($url, -1) == "/" || substr($url, -4) == ".php") {
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 
-// ==================== SESSIONS ====================
 } elseif ($id == "sessions") {
+  // Check subscription
+  if ($_SESSION['user_role'] != 'admin') {
+    $currentUserData = dbGetUserById($_SESSION['user_id']);
+    if (!dbIsSubActive($currentUserData)) {
+      echo "<script>alert('Your subscription has expired. Please contact admin.');window.location='./admin.php?id=logout'</script>";
+      exit;
+    }
+  }
   $_SESSION["connect"] = "";
   include_once('./include/menu.php');
   include_once('./settings/sessions.php');
@@ -151,11 +242,7 @@ if ($id == "login" || substr($url, -1) == "p") {
   } else {
     $_SESSION["connect"] = "<b class='text-red'>Not Connected</b>";
     $nl = '\n';
-    if ($currency == in_array($currency, $cekindo['indo'])) {
-      echo "<script>alert('Mikhmon not connected!".$nl."Silakan periksa kembali IP, User, Password dan port API harus enable.".$nl."Jika menggunakan koneksi VPN, pastikan VPN tersebut terkoneksi.')</script>";
-    }else{
-      echo "<script>alert('Mikhmon not connected!".$nl."Please check the IP, User, Password and port API must be enabled.')</script>";
-    }
+    echo "<script>alert('Not connected!".$nl."Please check IP, User, Password and API port.')</script>";
     if($c == "settings"){
       echo "<script>window.location='./admin.php?id=settings&session=" . $session . "'</script>";
     }else{
@@ -166,44 +253,34 @@ if ($id == "login" || substr($url, -1) == "p") {
 } elseif ($id == "uplogo" && !empty($session)) {
   include_once('./include/menu.php');
   include_once('./settings/uplogo.php');
-
 } elseif ($id == "reboot" && !empty($session)) {
   include_once('./process/reboot.php');
-
 } elseif ($id == "shutdown" && !empty($session)) {
   include_once('./process/shutdown.php');
-
 } elseif ($id == "remove-session" && $session != "") {
   include_once('./include/menu.php');
   if (isset($_SESSION['user_id'])) {
     dbDeleteRouter($_SESSION['user_id'], $session);
   }
   echo "<script>window.location='./admin.php?id=sessions'</script>";
-
 } elseif ($id == "about") {
   include_once('./include/menu.php');
   include_once('./include/about.php');
-
 } elseif ($id == "logout") {
   include_once('./include/menu.php');
   echo "<b class='cl-w'><i class='fa fa-circle-o-notch fa-spin' style='font-size:24px'></i> Logout...</b>";
   session_destroy();
   echo "<script>window.location='./admin.php?id=login'</script>";
-
 } elseif ($id == "remove-logo" && $logo != "" && !empty($session)) {
   include_once('./include/menu.php');
   $logopath = "./img/";
-  $remlogo = $logopath . $logo;
-  unlink("$remlogo");
+  unlink($logopath . $logo);
   echo "<script>window.location='./admin.php?id=uplogo&session=" . $session . "'</script>";
-
 } elseif ($id == "editor" && !empty($session)) {
   include_once('./include/menu.php');
   include_once('./settings/vouchereditor.php');
-
 } elseif (empty($id)) {
   echo "<script>window.location='./admin.php?id=sessions'</script>";
-
 } elseif(in_array($id, $ids) && empty($session)){
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 }

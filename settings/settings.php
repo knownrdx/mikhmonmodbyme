@@ -1,9 +1,4 @@
 <?php
-/*
- *  Mikhmon Multi-User Settings
- *  Based on Mikhmon V3 by Laksamadi Guko (GPL v2)
- */
-
 error_reporting(0);
 
 if (!isset($_SESSION["mikhmon"])) {
@@ -13,6 +8,9 @@ if (!isset($_SESSION["mikhmon"])) {
   // New router - create empty entry in database
   if ($id == "settings" && explode("-",$router)[0] == "new") {
     if (isset($_SESSION['user_id'])) {
+      if (!dbCanAddRouter($_SESSION['user_id'])) {
+        echo "<script>alert('Router limit reached! Contact admin to increase your limit.');window.location='./admin.php?id=sessions'</script>";
+      } else {
       dbSaveRouter($_SESSION['user_id'], $router, array(
         'ip_host' => '',
         'user_host' => '',
@@ -26,6 +24,7 @@ if (!isset($_SESSION["mikhmon"])) {
         'idle_timeout' => '10',
         'live_report' => 'disable',
       ));
+      }
     }
     echo "<script>window.location='./admin.php?id=settings&session=" . $router . "'</script>";
   }
