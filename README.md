@@ -56,7 +56,7 @@ git push -u origin main
 
 1. Coolify automatically **Nixpacks** select korbe — **ETA CHANGE KORTE HOBE!**
 2. Build Pack dropdown theke **"Docker Compose"** select korun
-3. Docker Compose file location: `docker-compose.yml` (default thakbe, change na korle cholbe)
+3. Docker Compose file location: `docker-compose.yaml` (default thakbe, change na korle cholbe)
 
 ### Step 4: Port Configuration
 
@@ -100,14 +100,14 @@ git clone YOUR_REPO_URL mikhmon
 cd mikhmon
 
 # Local version use korun (port mapping ache)
-docker-compose -f docker-compose.local.yml up -d
+docker-compose -f docker-compose.local.yaml up -d
 ```
 
 Browser e open korun: `http://localhost:8080`
 
 Stop korte:
 ```bash
-docker-compose -f docker-compose.local.yml down
+docker-compose -f docker-compose.local.yaml down
 ```
 
 ---
@@ -189,8 +189,8 @@ Jodi apni old Mikhmon V3 theke upgrade korchen:
 ```
 mikhmon/
 ├── Dockerfile                  # Docker image (PHP 7.4 + Nginx + Supervisor)
-├── docker-compose.yml          # Coolify deployment
-├── docker-compose.local.yml    # Local deployment (with port mapping)
+├── docker-compose.yaml          # Coolify deployment
+├── docker-compose.local.yaml    # Local deployment (with port mapping)
 ├── nginx.conf                  # Nginx config
 ├── admin.php                   # Admin panel
 ├── index.php                   # Main dashboard
