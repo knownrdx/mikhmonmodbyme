@@ -7,5 +7,8 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./include:/var/www/html/include
+      - mikhmon-data:/var/www/html/data
+
+volumes:
+  mikhmon-data:
   
