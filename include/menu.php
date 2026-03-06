@@ -1,20 +1,4 @@
 <?php
-/*
- *  Copyright (C) 2018 Laksamadi Guko.
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 session_start();
 // hide all error
 error_reporting(0);
@@ -220,8 +204,13 @@ if($idleto != "disable"){
 } ?>  
   <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-gear"></i> <?= $_admin_settings ?></a>
   <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
-  <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin'): ?>
+  <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin' && !isset($_SESSION['logged_in_as'])): ?>
   <a href="./admin.php?id=users" class="menu"><i class="fa fa-users"></i> User Management</a>
+  <?php elseif (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'user' && !isset($_SESSION['logged_in_as'])): ?>
+  <a href="./admin.php?id=users" class="menu"><i class="fa fa-users"></i> My Users</a>
+  <?php endif; ?>
+  <?php if (isset($_SESSION['logged_in_as'])): ?>
+  <a href="./admin.php?id=switch-back" class="menu text-green"><i class="fa fa-arrow-left"></i> Switch Back to Admin</a>
   <?php endif; ?>
   <a href="./admin.php?id=about" class="menu <?= $sabout; ?>"><i class="fa fa-info-circle"></i> <?= $_about ?></a>
 
