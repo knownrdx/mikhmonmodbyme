@@ -1,0 +1,17 @@
+## Local development / VPS direct deploy (NOT for Coolify)
+## Usage: docker-compose -f docker-compose.local.yml up -d
+## Open: http://localhost:8080
+
+version: "3.8"
+services:
+  mikhmon:
+    build: .
+    container_name: mikhmon
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - mikhmon-data:/var/www/html/data
+
+volumes:
+  mikhmon-data:

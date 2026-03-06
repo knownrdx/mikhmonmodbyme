@@ -2,12 +2,15 @@ version: "3.8"
 services:
   mikhmon:
     build: .
-    container_name: mikhmon
     restart: unless-stopped
-    ports:
-      - "8080:80"
     volumes:
       - mikhmon-data:/var/www/html/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/admin.php"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
 
 volumes:
   mikhmon-data:

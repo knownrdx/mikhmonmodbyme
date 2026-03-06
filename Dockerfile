@@ -1,45 +1,63 @@
 FROM php:7.4-fpm
 
-# Install nginx, supervisor, and required PHP extensions
+# Install nginx, supervisor, SQLite, and PHP sockets extension
 RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
     libsqlite3-dev \
+    curl \
     && docker-php-ext-install sockets pdo_sqlite \
     && rm -rf /var/lib/apt/lists/*
 
-# Enable SQLite3 extension (built-in but ensure it's there)
-RUN docker-php-ext-enable pdo_sqlite
+# Remove default nginx site
+RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
 
 # Copy nginx config
-COPY nginx.conf /etc/nginx/sites-available/default
+COPY nginx.conf /etc/nginx/sites-enabled/default
 
 # Copy application files
 COPY . /var/www/html/
 
-# Create data directory for SQLite database with proper permissions
+# Create data directory and set permissions
 RUN mkdir -p /var/www/html/data \
     && chown -R www-data:www-data /var/www/html/ \
     && chmod -R 755 /var/www/html/ \
-    && chmod -R 777 /var/www/html/data
+    && chmod -R 777 /var/www/html/data \
+    && chmod -R 777 /var/www/html/img
 
-# Create supervisor config
-RUN echo '[supervisord]' > /etc/supervisor/conf.d/app.conf && \
-    echo 'nodaemon=true' >> /etc/supervisor/conf.d/app.conf && \
-    echo '' >> /etc/supervisor/conf.d/app.conf && \
-    echo '[program:php-fpm]' >> /etc/supervisor/conf.d/app.conf && \
-    echo 'command=php-fpm -F' >> /etc/supervisor/conf.d/app.conf && \
-    echo 'autostart=true' >> /etc/supervisor/conf.d/app.conf && \
-    echo 'autorestart=true' >> /etc/supervisor/conf.d/app.conf && \
-    echo '' >> /etc/supervisor/conf.d/app.conf && \
-    echo '[program:nginx]' >> /etc/supervisor/conf.d/app.conf && \
-    echo 'command=nginx -g "daemon off;"' >> /etc/supervisor/conf.d/app.conf && \
-    echo 'autostart=true' >> /etc/supervisor/conf.d/app.conf && \
-    echo 'autorestart=true' >> /etc/supervisor/conf.d/app.conf
+# Create supervisor config to run both nginx and php-fpm
+COPY <<'EOF' /etc/supervisor/conf.d/app.conf
+[supervisord]
+nodaemon=true
+user=root
 
+[program:php-fpm]
+command=php-fpm -F
+autostart=true
+autorestart=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
+[program:nginx]
+command=nginx -g "daemon off;"
+autostart=true
+autorestart=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+EOF
+
+# Expose port 80 for Coolify
 EXPOSE 80
 
-# Use volume for persistent database
+# Persistent database storage
 VOLUME ["/var/www/html/data"]
+
+# Health check for Coolify
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
+    CMD curl -f http://localhost/admin.php || exit 1
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/app.conf"]

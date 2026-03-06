@@ -2,47 +2,18 @@
 
 MikroTik Hotspot Monitor — Modified version with **multi-user database system**, **RouterOS 7.x date format fix**, and **Coolify/Docker deployment** support.
 
-> Based on [Mikhmon V3](https://github.com/laksa19/mikhmonv3) by Laksamadi Guko (GPL v2)
+> Based on Mikhmon V3 by Laksamadi Guko (GPL v2)
 
 ---
 
 ## Features
 
-- **Multi-User System** — Multiple users can register and login. Each user manages their own routers independently. Admin can manage all users.
+- **Multi-User System** — Multiple users can register and login. Each user manages their own routers independently.
+- **Admin Panel** — Admin can manage all users (add/delete) from User Management page.
 - **SQLite Database** — No more flat file config. User accounts and router sessions stored in SQLite with bcrypt password hashing.
 - **RouterOS 7.x Support** — On-login and scheduler scripts fixed for new `YYYY-MM-DD` date format.
-- **Coolify / Docker Ready** — Single-container Dockerfile with PHP 7.4 + Nginx + Supervisor. Push to GitHub, deploy on Coolify in one click.
+- **Coolify Ready** — Dockerfile + docker-compose optimized for Coolify deployment. No Bad Gateway errors.
 - All original Mikhmon V3 features: voucher management, hotspot user management, traffic monitor, reports, etc.
-
----
-
-## Quick Start
-
-### Option 1: Coolify (Recommended)
-
-1. Push this repo to your GitHub
-2. In Coolify dashboard → Add New Resource → Docker Compose
-3. Paste your GitHub repo URL
-4. Deploy — done!
-
-The app runs on port **8080** by default. Database persists in a Docker volume.
-
-### Option 2: Docker Compose
-
-```bash
-git clone https://github.com/YOUR_USERNAME/mikhmon.git
-cd mikhmon
-docker-compose up -d
-```
-
-Open `http://localhost:8080` in your browser.
-
-### Option 3: Manual (PHP 7.4 + Nginx/Apache)
-
-1. Clone the repo to your web server root
-2. Make sure PHP 7.4 with `sqlite3` and `sockets` extensions is installed
-3. Set write permissions: `chmod -R 777 data/`
-4. Open in browser
 
 ---
 
@@ -50,73 +21,166 @@ Open `http://localhost:8080` in your browser.
 
 | Username | Password | Role |
 |----------|----------|------|
-| mikhmon  | 1234     | Admin |
+| `mikhmon`  | `1234`     | Admin |
 
-> Change the default password immediately after first login!
+> First run e auto create hobe. Login korar por password change kore nin!
+
+---
+
+## Deploy on Coolify (Step by Step)
+
+### Step 1: Git Repository e Push Korun
+
+Apnar VPS/Git service e (Gitea, GitLab, or private Git) ei project ta push korun.
+
+```bash
+cd mikhmon-fixed
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin YOUR_GIT_REPO_URL
+git push -u origin main
+```
+
+### Step 2: Coolify te New Resource Create Korun
+
+1. Coolify dashboard e login korun
+2. Apnar **Project** e jan (or create new project)
+3. **"+ Add New Resource"** button e click korun
+4. **"Private Repository (with Deploy Key)"** or **"Public Repository"** select korun
+5. Apnar Git repo URL paste korun
+
+### Step 3: Build Pack Select Korun
+
+> **ETA IMPORTANT — Bad Gateway error ekhane hoy!**
+
+1. Coolify automatically **Nixpacks** select korbe — **ETA CHANGE KORTE HOBE!**
+2. Build Pack dropdown theke **"Docker Compose"** select korun
+3. Docker Compose file location: `docker-compose.yml` (default thakbe, change na korle cholbe)
+
+### Step 4: Port Configuration
+
+1. **General** tab e jan
+2. **"Ports Exposes"** field e likhen: `80`
+3. Apnar **domain** set korun (e.g., `mikhmon.yourdomain.com`)
+   - Domain provider e **A Record** add korun pointing to your VPS IP
+
+### Step 5: Volume Persist Korun (Database Loss Rodhh)
+
+1. **"Storages"** tab e jan
+2. **"+ Add"** click korun
+3. Volume name: `mikhmon-data`
+4. Source path: `/var/www/html/data` (container path)
+5. **"Preserve"** checkbox tick korun — na korle redeploy e data moche jabe!
+
+### Step 6: Deploy Korun
+
+1. **"Deploy"** button e click korun
+2. Build logs check korun — successful hole green hobe
+3. Apnar domain e browse korun — Mikhmon login page dekhte paben!
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| **Bad Gateway (502)** | Build Pack "Docker Compose" select korun, "Nixpacks" na. Port Exposes `80` set korun. |
+| **502 after deploy** | Coolify Logs check korun. Container healthy kina check korun. |
+| **Database reset on redeploy** | Storages tab e `/var/www/html/data` volume add korun ebong "Preserve" tick korun. |
+| **Can't connect to MikroTik** | VPS theke MikroTik IP te port 8728 accessible kina check korun. API service enable korun MikroTik e. |
+| **Login page ashche na** | Container logs e PHP error check korun. SQLite extension install ache kina verify korun. |
+
+---
+
+## Deploy Locally (Without Coolify)
+
+Local VPS e or testing er jonno:
+
+```bash
+git clone YOUR_REPO_URL mikhmon
+cd mikhmon
+
+# Local version use korun (port mapping ache)
+docker-compose -f docker-compose.local.yml up -d
+```
+
+Browser e open korun: `http://localhost:8080`
+
+Stop korte:
+```bash
+docker-compose -f docker-compose.local.yml down
+```
+
+---
+
+## Deploy Without Docker (Manual)
+
+1. PHP 7.4 install korun `sqlite3` ebong `sockets` extension soho
+2. Nginx or Apache configure korun
+3. Project files web root e copy korun
+4. Permission set korun:
+```bash
+chmod -R 777 data/
+chmod -R 777 img/
+```
+5. Browser e open korun
 
 ---
 
 ## Multi-User System
 
+### How It Works
+
+- **Register** — Login page e "Register New Account" link theke new account create korun
+- **Login** — Each user apnar own username/password diye login korben
+- **Router Isolation** — Each user sudhu nijer routers dekhte parbe, onner ta na
+- **Admin** — Admin role users "User Management" page theke sob users manage korte parbe
+
 ### User Roles
 
-- **Admin** — Can manage all users (add, delete), access User Management page, and manage own routers
-- **User** — Can register, login, and manage only their own routers
+| Role | Permissions |
+|------|------------|
+| **Admin** | Manage all users, add/delete users, manage own routers |
+| **User** | Register, login, manage only own routers |
 
-### Registration
+### Admin User Management
 
-- Anyone can register from the login page via "Register New Account" link
-- Each user gets their own isolated router sessions
-- Admin can also add users manually from the User Management page
-
-### User Management (Admin Only)
-
-Navigate to **Admin Settings → User Management** to:
-- View all registered users
-- Add new users with role selection
-- Delete non-admin users
+1. Login korun admin account diye
+2. **Admin Settings** page e jan
+3. **"Manage Users"** link e click korun
+4. User add/delete korte parben
 
 ---
 
 ## RouterOS 7.x Date Format Fix
 
-RouterOS 7.x changed the system date format from `jan/01/2024` to `2024-01-01`. This broke Mikhmon's on-login expiry calculation and scheduler monitoring.
+### Problem
 
-### What was fixed:
+RouterOS 7.x changed system date format:
+- **Old format**: `jan/01/2024`
+- **New format**: `2024-01-01`
 
-**On-Login Script** (`hotspot/adduserprofile.php` & `hotspot/userprofilebyname.php`)
-- Added date format detection: checks if `[:pick $date 4 5] = "-"` (new format)
-- Converts `YYYY-MM-DD` → `jan/01/2024` format before processing
-- Also converts `next-run` scheduler result from new format back to expected format
+This broke Mikhmon's on-login expiry calculation — users expired immediately or never expired.
 
-**Scheduler On-Event Script** (same files, `$bgservice` variable)
-- Same date format conversion added for the background service that monitors expired users
+### Fix Applied
 
-### After deploying:
+**On-Login Script** — Date format auto-detect kora hoyeche. System date `YYYY-MM-DD` format e thakle automatically `jan/01/2024` format e convert kore. Scheduler `next-run` result o same bhabe convert hoy.
 
-Open every existing Hotspot User Profile in Mikhmon and click **Save** to regenerate the on-login and scheduler scripts with the new date-format-compatible code.
+**Scheduler Monitor Script** — Same fix. Background service je expired users check kore, seo new date format handle kore.
+
+### After Deploy
+
+Mikhmon e login kore **prottek Hotspot User Profile** open korun ebong **Save** click korun. Eta on-login ebong scheduler scripts re-generate korbe new date-compatible code diye.
 
 ---
 
-## MikroTik Scripts Reference
+## Migration from Old Mikhmon
 
-### On-Login Script (generated by Mikhmon)
+Jodi apni old Mikhmon V3 theke upgrade korchen:
 
-This script runs when a hotspot user logs in. It:
-1. Checks the user's comment field for expiry status
-2. Gets the current system date (handles both old and new RouterOS date formats)
-3. Creates a temporary scheduler to calculate the expiry date
-4. Writes the expiry date/time to the user's comment field
-5. Optionally locks the user to their MAC address
-6. Optionally records the login for sales reports
-
-### Scheduler On-Event Script (generated by Mikhmon)
-
-This script runs periodically (every ~2 minutes) to:
-1. Get the current date/time (handles both formats)
-2. Loop through all hotspot users with the matching profile
-3. Compare each user's expiry date/time in comment with current date/time
-4. Remove or disable expired users and kick them from active sessions
+1. System automatically old `include/config.php` flat file detect kore
+2. First run e admin user ebong sob router sessions SQLite e migrate kore
+3. `data/.migrated` file create hoy jate duplicate migration na hoy
+4. Old config format ar use hoy na
 
 ---
 
@@ -124,96 +188,58 @@ This script runs periodically (every ~2 minutes) to:
 
 ```
 mikhmon/
-├── admin.php              # Admin panel (login, register, sessions, settings)
-├── index.php              # Main dashboard router
-├── Dockerfile             # Docker build (PHP 7.4 + Nginx + Supervisor)
-├── docker-compose.yml     # Docker Compose for Coolify deployment
-├── nginx.conf             # Nginx configuration
-├── data/                  # SQLite database storage (persistent volume)
-│   └── mikhmon.db         # Auto-created on first run
+├── Dockerfile                  # Docker image (PHP 7.4 + Nginx + Supervisor)
+├── docker-compose.yml          # Coolify deployment
+├── docker-compose.local.yml    # Local deployment (with port mapping)
+├── nginx.conf                  # Nginx config
+├── admin.php                   # Admin panel
+├── index.php                   # Main dashboard
+├── data/                       # SQLite database (persistent)
+│   └── mikhmon.db              # Auto-created on first run
 ├── include/
-│   ├── database.php       # SQLite database functions (multi-user core)
-│   ├── config.php         # Config loader (reads from database)
-│   ├── readcfg.php        # Config parser (backward compatible)
-│   ├── login.php          # Login page template
-│   ├── register.php       # Registration page template
-│   ├── usermanage.php     # User management page (admin only)
-│   ├── menu.php           # Navigation menu
-│   └── ...
+│   ├── database.php            # Multi-user database system
+│   ├── config.php              # Config loader (from database)
+│   ├── readcfg.php             # Config parser
+│   ├── login.php               # Login page
+│   ├── register.php            # Registration page
+│   ├── usermanage.php          # User management (admin)
+│   └── menu.php                # Navigation
 ├── hotspot/
-│   ├── adduserprofile.php  # Add hotspot profile (scripts fixed)
-│   ├── userprofilebyname.php # Edit hotspot profile (scripts fixed)
-│   ├── users.php           # User list
+│   ├── adduserprofile.php      # Add profile (scripts fixed)
+│   ├── userprofilebyname.php   # Edit profile (scripts fixed)
 │   └── ...
 ├── settings/
-│   ├── sessions.php        # Router session list (per-user)
-│   ├── settings.php        # Router settings (saves to database)
+│   ├── sessions.php            # Router list (per-user)
+│   ├── settings.php            # Router config (database)
 │   └── ...
 ├── lib/
-│   └── routeros_api.class.php  # RouterOS API client
-├── report/                 # Sales reports
-├── voucher/                # Voucher templates
+│   └── routeros_api.class.php  # RouterOS API
+├── report/                     # Sales reports
+├── voucher/                    # Voucher templates
 └── ...
 ```
-
----
-
-## Migration from Old Mikhmon
-
-If you're upgrading from the original Mikhmon V3:
-
-1. The system auto-detects the old `include/config.php` flat file
-2. On first run, it migrates the admin user and all router sessions to SQLite
-3. A `.migrated` flag file is created in `data/` to prevent duplicate migration
-4. The old `config.php` format is no longer used for storage
 
 ---
 
 ## Changelog
 
 ### Multi-User Mod (2025)
-
-1. **Multi-user database system** — SQLite replaces flat file config
-2. **User registration** — New users can register from login page
-3. **Per-user router isolation** — Each user sees only their own routers
-4. **Admin user management** — Add, delete users with role control
-5. **Bcrypt password hashing** — Secure password storage
-6. **RouterOS 7.x date fix** — On-login and scheduler scripts handle new date format
-7. **Coolify/Docker ready** — Single-container Dockerfile, docker-compose with persistent volume
-8. **Auto-migration** — Old config.php data migrated automatically
+- Multi-user database system (SQLite + bcrypt)
+- User registration page
+- Per-user router isolation
+- Admin user management panel
+- RouterOS 7.x date format fix (on-login + scheduler)
+- Coolify-optimized Dockerfile + docker-compose
+- Auto-migration from old config.php
 
 ### V3.20 (06-30-2021)
-- Perbaikan typo script profile `on-login`
+- Perbaikan typo script profile on-login
 
 ### V3.19 (09-08-2020)
-- Penambahan jumlah sisa voucher di "option comment" laman user list
+- Penambahan jumlah sisa voucher
 
 ### V3.18 (08-16-2019)
 - Penambahan harga jual (selling price)
-
-### V3.17 (08-06-2019)
-- Perbaikan live report, generate users
-- Penambahan idle timeout, ping IP MikroTik
-
-### V3.16 (07-14-2019)
-- Penambahan address pool di user profile
-- Notif new update
-
-### V3.15 (07-02-2019)
-- Update RouterOS API for support v6.45.x
-
-### V3.14 (05-09-2019)
-- Perbaikan time zone untuk print/quick print
-- Penambahan input comment
-
-### V3.13 (03-20-2019)
-- Perbaikan QR Code (no longer uses Google Chart API)
-- Perubahan mode expired (comment-based instead of per-user scheduler)
-- Penghapusan grace period
-
-### V3.12 (03-08-2019)
-- Export user to script/csv
-- Filter report by prefix
 
 ---
 
@@ -221,4 +247,4 @@ If you're upgrading from the original Mikhmon V3:
 
 GNU General Public License v2.0 — see [LICENSE](LICENSE) file.
 
-Original Mikhmon V3 by [Laksamadi Guko](https://github.com/laksa19/mikhmonv3).
+Original Mikhmon V3 by Laksamadi Guko.
