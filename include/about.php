@@ -57,16 +57,10 @@ if (!isset($_SESSION["mikhmon"])) {
       Author : Laksamadi Guko
     </li>
     <li>
-      Licence : <a href="https://github.com/laksa19/mikhmonv2/blob/master/LICENSE">GPLv2</a>
+      Licence : GPLv2
     </li>
     <li>
-      API Class : <a href="https://github.com/BenMenking/routeros-api">routeros-api</a>
-    </li>
-    <li>
-      Website : <a href="https://laksa19.github.io">laksa19.github.io</a>
-    </li>
-    <li>
-      Facebook : <a href="https://fb.com/laksamadi">fb.com/laksamadi</a>
+      API Class : routeros-api (BenMenking)
     </li>
   </ul>
 </p>
@@ -85,9 +79,10 @@ if (!isset($_SESSION["mikhmon"])) {
   <h3><i class="fa fa-info-circle"></i> Changelog</h3>
   </div>
   <div class="card-body">
-  <div class="iFWrapper">
-    <iframe src="https://laksa19.github.io/mikhmonv3" ></iframe>
-  </div>
+  <p>Multi-User Mod (2025) - SQLite database, multi-user registration, RouterOS 7.x date format fix, Coolify/Docker deployment.</p>
+  <p>V3.20 (06-30-2021) - Perbaikan typo script profile on-login.</p>
+  <p>V3.19 (09-08-2020) - Penambahan jumlah sisa voucher.</p>
+  <p>V3.18 (08-16-2019) - Penambahan harga jual.</p>
   </div>
 </div>
 </div>
