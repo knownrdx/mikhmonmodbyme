@@ -20,7 +20,7 @@ if (!isset($_SESSION["mikhmon"])) {
 } else {
   // Check subscription for non-admin users
   include('./include/config.php');
-  if ($_SESSION['user_role'] != 'admin' && isset($_SESSION['user_id'])) {
+  if ($_SESSION['user_role'] != 'superadmin' && isset($_SESSION['user_id'])) {
     $checkUser = dbGetUserById($_SESSION['user_id']);
     if (!dbIsSubActive($checkUser)) {
       echo "<script>alert('Your subscription has expired.');window.location='./admin.php?id=logout'</script>";

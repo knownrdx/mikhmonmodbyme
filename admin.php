@@ -75,8 +75,8 @@ if ($id == "login-as" && isset($_GET['token'])) {
     
     $authUser = dbAuthUser($user, $pass);
     if ($authUser) {
-      // Check subscription for non-admin users
-      if ($authUser['role'] != 'admin' && !dbIsSubActive($authUser)) {
+      // Check subscription for non-superadmin
+      if ($authUser['role'] != 'superadmin' && !dbIsSubActive($authUser)) {
         $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Your subscription has expired. Please contact admin.</div>';
       } else {
         $_SESSION["mikhmon"] = $authUser['username'];
@@ -119,35 +119,26 @@ if ($id == "login-as" && isset($_GET['token'])) {
 
   include_once('./include/register.php');
 
-// ==================== USER MANAGEMENT (admin + sub-admin) ====================
-} elseif ($id == "users" && isset($_SESSION["mikhmon"]) && ($_SESSION["user_role"] == "admin" || $_SESSION["user_role"] == "user")) {
+// ==================== USER MANAGEMENT (superadmin + admin) ====================
+} elseif ($id == "users" && isset($_SESSION["mikhmon"]) && ($_SESSION["user_role"] == "superadmin" || $_SESSION["user_role"] == "admin")) {
   
-  // Generate login-as token
+  // Login-as
   if (isset($_GET['login-as-user']) && $_GET['login-as-user'] != '') {
     $targetId = (int)$_GET['login-as-user'];
-    // Sub-admin can only login-as their own subusers
-    if ($_SESSION['user_role'] == 'user') {
-      $targetUser = dbGetUserById($targetId);
-      if (!$targetUser || $targetUser['created_by'] != $_SESSION['user_id']) {
-        echo "<script>alert('Access denied');window.location='./admin.php?id=users'</script>";
-        exit;
-      }
+    if ($_SESSION['user_role'] == 'admin') {
+      $t = dbGetUserById($targetId);
+      if (!$t || $t['created_by'] != $_SESSION['user_id']) { echo "<script>alert('Access denied');window.location='./admin.php?id=users'</script>"; exit; }
     }
     $token = dbGenerateLoginToken($_SESSION['user_id'], $targetId);
-    echo "<script>window.location='./admin.php?id=login-as&token=" . $token . "'</script>";
-    exit;
+    echo "<script>window.location='./admin.php?id=login-as&token=" . $token . "'</script>"; exit;
   }
   
-  // Delete user
+  // Delete
   if (isset($_GET['delete-user']) && $_GET['delete-user'] != '') {
     $delId = (int)$_GET['delete-user'];
-    // Sub-admin can only delete their own subusers
-    if ($_SESSION['user_role'] == 'user') {
-      $targetUser = dbGetUserById($delId);
-      if (!$targetUser || $targetUser['created_by'] != $_SESSION['user_id']) {
-        echo "<script>alert('Access denied');window.location='./admin.php?id=users'</script>";
-        exit;
-      }
+    if ($_SESSION['user_role'] == 'admin') {
+      $t = dbGetUserById($delId);
+      if (!$t || $t['created_by'] != $_SESSION['user_id']) { echo "<script>alert('Access denied');window.location='./admin.php?id=users'</script>"; exit; }
     }
     dbDeleteUser($delId);
     echo "<script>window.location='./admin.php?id=users'</script>";
@@ -155,45 +146,45 @@ if ($id == "login-as" && isset($_GET['token'])) {
   
   // Add user
   if (isset($_POST['adduser'])) {
-    $newuser = trim($_POST['newuser']);
-    $newpass = $_POST['newpass'];
-    if (!empty($newuser) && !empty($newpass)) {
-      if ($_SESSION['user_role'] == 'admin') {
-        // Admin adds sub-admin (role=user) with subscription
-        $subMonths = (int)$_POST['submonths'];
-        if ($subMonths < 1) $subMonths = 1;
-        $subExpires = date('Y-m-d', strtotime("+{$subMonths} months"));
-        $maxRouters = (int)$_POST['maxrouters'];
-        if ($maxRouters < 1) $maxRouters = 4;
-        dbCreateUser($newuser, $newpass, 'user', $subExpires, $_SESSION['user_id'], $maxRouters);
+    $nu = trim($_POST['newuser']); $np = $_POST['newpass'];
+    if (!empty($nu) && !empty($np)) {
+      if ($_SESSION['user_role'] == 'superadmin') {
+        $role = $_POST['newrole'] ?: 'user';
+        $sm = max(1, (int)$_POST['submonths']);
+        $se = date('Y-m-d', strtotime("+{$sm} months"));
+        $mr = max(1, (int)$_POST['maxrouters']);
+        $mu = ($role == 'admin') ? max(0, (int)$_POST['maxusers']) : 0;
+        dbCreateUser($nu, $np, $role, $se, $_SESSION['user_id'], $mr, $mu);
       } else {
-        // Sub-admin adds subuser (role=subuser), no subscription needed, default 4 routers
-        dbCreateUser($newuser, $newpass, 'subuser', '', $_SESSION['user_id'], 4);
+        // Admin adds child user — no sub needed, inherits parent sub
+        if (dbCanAddUser($_SESSION['user_id'])) {
+          dbCreateUser($nu, $np, 'user', '', $_SESSION['user_id'], 5, 0);
+        } else {
+          echo "<script>alert('User limit reached! Contact super admin.')</script>";
+        }
       }
     }
     echo "<script>window.location='./admin.php?id=users'</script>";
   }
 
-  // Update subscription (admin only)
-  if (isset($_POST['updatesub']) && $_SESSION['user_role'] == 'admin') {
-    $subUserId = (int)$_POST['sub_user_id'];
-    $subMonths = (int)$_POST['submonths'];
-    if ($subMonths < 1) $subMonths = 1;
-    $currentUser = dbGetUserById($subUserId);
-    if ($currentUser) {
-      $baseDate = (!empty($currentUser['sub_expires']) && strtotime($currentUser['sub_expires']) > time()) ? $currentUser['sub_expires'] : date('Y-m-d');
-      $newExpiry = date('Y-m-d', strtotime($baseDate . " +{$subMonths} months"));
-      dbUpdateSubscription($subUserId, $newExpiry);
+  // Extend subscription (superadmin only)
+  if (isset($_POST['updatesub']) && $_SESSION['user_role'] == 'superadmin') {
+    $uid = (int)$_POST['sub_user_id'];
+    $sm = max(1, (int)$_POST['submonths']);
+    $cu = dbGetUserById($uid);
+    if ($cu) {
+      $base = (!empty($cu['sub_expires']) && strtotime($cu['sub_expires']) > time()) ? $cu['sub_expires'] : date('Y-m-d');
+      dbUpdateSubscription($uid, date('Y-m-d', strtotime($base . " +{$sm} months")));
     }
     echo "<script>window.location='./admin.php?id=users'</script>";
   }
 
-  // Update max routers (admin only)
-  if (isset($_POST['updaterouters']) && $_SESSION['user_role'] == 'admin') {
-    $routerUserId = (int)$_POST['router_user_id'];
-    $newMax = (int)$_POST['newmaxrouters'];
-    if ($newMax < 1) $newMax = 1;
-    dbUpdateMaxRouters($routerUserId, $newMax);
+  // Update limits (superadmin only)
+  if (isset($_POST['updatelimits']) && $_SESSION['user_role'] == 'superadmin') {
+    $uid = (int)$_POST['limit_user_id'];
+    $nr = max(1, (int)$_POST['nr']);
+    $nu = max(0, (int)$_POST['nu']);
+    dbUpdateLimits($uid, $nr, $nu);
     echo "<script>window.location='./admin.php?id=users'</script>";
   }
   
@@ -208,7 +199,7 @@ if ($id == "login-as" && isset($_GET['token'])) {
 
 } elseif ($id == "sessions") {
   // Check subscription
-  if ($_SESSION['user_role'] != 'admin') {
+  if ($_SESSION['user_role'] != 'superadmin') {
     $currentUserData = dbGetUserById($_SESSION['user_id']);
     if (!dbIsSubActive($currentUserData)) {
       echo "<script>alert('Your subscription has expired. Please contact admin.');window.location='./admin.php?id=logout'</script>";

@@ -47,21 +47,23 @@ if (!isset($_SESSION["mikhmon"])) {
       <div class="card-header">
         <h3 class="card-title"><i class="fa fa-gear"></i> <?= $_admin_settings ?> &nbsp; | &nbsp;&nbsp;<i onclick="location.reload();" class="fa fa-refresh pointer " title="Reload data"></i>
         &nbsp; | &nbsp; <span class="text-blue"><i class="fa fa-user"></i> <?= htmlspecialchars($_SESSION['mikhmon']); ?></span>
-        <?php if ($_SESSION['user_role'] == 'admin' && !isset($_SESSION['logged_in_as'])): ?>
-          <span class="text-green">(Admin)</span>
+        <?php if ($_SESSION['user_role'] == 'superadmin' && !isset($_SESSION['logged_in_as'])): ?>
+          <span class="text-green">(Super Admin)</span>
           &nbsp; | &nbsp; <a href="./admin.php?id=users"><i class="fa fa-users"></i> Manage Users</a>
-        <?php elseif ($_SESSION['user_role'] == 'user' && !isset($_SESSION['logged_in_as'])): ?>
+        <?php elseif ($_SESSION['user_role'] == 'admin' && !isset($_SESSION['logged_in_as'])): ?>
           <?php 
           $myUserData = dbGetUserById($_SESSION['user_id']);
           $daysLeft = dbGetSubDaysLeft($myUserData);
-          $rCount = dbGetRouterCount($_SESSION['user_id']);
+          $rCount = dbGetAdminTotalRouterCount($_SESSION['user_id']);
           $rMax = $myUserData['max_routers'];
+          $uCount = dbGetChildUserCount($_SESSION['user_id']);
+          $uMax = $myUserData['max_users'];
           ?>
-          <span class="text-blue">(Routers: <?= $rCount; ?>/<?= $rMax; ?>)</span>
+          <span class="text-blue">(R: <?= $rCount; ?>/<?= $rMax; ?> | U: <?= $uCount; ?>/<?= $uMax; ?>)</span>
           <?php if ($daysLeft > 7): ?>
-            <span class="text-green">(Sub: <?= $daysLeft; ?>d)</span>
+            <span class="text-green">(<?= $daysLeft; ?>d)</span>
           <?php elseif ($daysLeft > 0): ?>
-            <span class="text-orange">(Sub: <?= $daysLeft; ?>d!)</span>
+            <span class="text-orange">(<?= $daysLeft; ?>d!)</span>
           <?php endif; ?>
           &nbsp; | &nbsp; <a href="./admin.php?id=users"><i class="fa fa-users"></i> My Users</a>
         <?php elseif (isset($_SESSION['logged_in_as'])): ?>
