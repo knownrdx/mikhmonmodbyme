@@ -220,6 +220,9 @@ if($idleto != "disable"){
 } ?>  
   <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-gear"></i> <?= $_admin_settings ?></a>
   <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
+  <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin'): ?>
+  <a href="./admin.php?id=users" class="menu"><i class="fa fa-users"></i> User Management</a>
+  <?php endif; ?>
   <a href="./admin.php?id=about" class="menu <?= $sabout; ?>"><i class="fa fa-info-circle"></i> <?= $_about ?></a>
 
 </div>
@@ -265,16 +268,16 @@ include('./info.php');
   </select>
   <select class="connect optfa ses text-right mr-t-10 pd-5">
     <option id="MikhmonSession" value="<?= $session; ?>"><?= $hotspotname; ?></option>
-      <?php
-      foreach (file('./include/config.php') as $line) {
-        $sesname = explode("'", $line)[1];
-        if ($sesname == "" || $sesname== "mikhmon") {
-        } else {
-        if($sesname == $session){
-          echo '<option value="' . $sesname. '">'.$sesname. ' &#x2666;</option>';
-        }else{
-          echo '<option value="' . $sesname. '">'.$sesname. '</option>';
-        }
+    <?php
+      if (isset($_SESSION['user_id'])) {
+        $menuRouters = dbGetRouters($_SESSION['user_id']);
+        foreach ($menuRouters as $mr) {
+          $sesname = $mr['session_name'];
+          if ($sesname == $session) {
+            echo '<option value="' . $sesname. '">'.$sesname. ' &#x2666;</option>';
+          } else {
+            echo '<option value="' . $sesname. '">'.$sesname. '</option>';
+          }
         }
       }
       ?>

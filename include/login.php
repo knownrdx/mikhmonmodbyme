@@ -55,6 +55,11 @@ session_start();
             <?= $error; ?>
           </td>
         </tr>
+        <tr>
+          <td class="align-middle text-center">
+            <a href="./admin.php?id=register"><i class="fa fa-user-plus"></i> Register New Account</a>
+          </td>
+        </tr>
       </table>
       </form>
       </center>
