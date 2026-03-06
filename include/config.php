@@ -12,7 +12,12 @@ $data['mikhmon'] = array('1' => 'mikhmon<|<' . (isset($_SESSION['mikhmon']) ? $_
 
 // Load routers for current user
 if (isset($_SESSION['user_id'])) {
-    $dbRouters = dbGetRouters($_SESSION['user_id']);
+    // For admin role: load own + all child users' routers (shared pool)
+    if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin') {
+        $dbRouters = dbGetAdminAllRouters($_SESSION['user_id']);
+    } else {
+        $dbRouters = dbGetRouters($_SESSION['user_id']);
+    }
     foreach ($dbRouters as $r) {
         $sess = $r['session_name'];
         $data[$sess] = array(

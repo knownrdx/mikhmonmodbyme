@@ -204,13 +204,13 @@ if($idleto != "disable"){
 } ?>  
   <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-gear"></i> <?= $_admin_settings ?></a>
   <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
-  <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin' && !isset($_SESSION['logged_in_as'])): ?>
+  <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'superadmin' && !isset($_SESSION['logged_in_as'])): ?>
   <a href="./admin.php?id=users" class="menu"><i class="fa fa-users"></i> User Management</a>
-  <?php elseif (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'user' && !isset($_SESSION['logged_in_as'])): ?>
+  <?php elseif (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin' && !isset($_SESSION['logged_in_as'])): ?>
   <a href="./admin.php?id=users" class="menu"><i class="fa fa-users"></i> My Users</a>
   <?php endif; ?>
   <?php if (isset($_SESSION['logged_in_as'])): ?>
-  <a href="./admin.php?id=switch-back" class="menu text-green"><i class="fa fa-arrow-left"></i> Switch Back to Admin</a>
+  <a href="./admin.php?id=switch-back" class="menu text-green"><i class="fa fa-arrow-left"></i> Switch Back</a>
   <?php endif; ?>
   <a href="./admin.php?id=about" class="menu <?= $sabout; ?>"><i class="fa fa-info-circle"></i> <?= $_about ?></a>
 
@@ -259,7 +259,11 @@ include('./info.php');
     <option id="MikhmonSession" value="<?= $session; ?>"><?= $hotspotname; ?></option>
     <?php
       if (isset($_SESSION['user_id'])) {
-        $menuRouters = dbGetRouters($_SESSION['user_id']);
+        if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin') {
+          $menuRouters = dbGetAdminAllRouters($_SESSION['user_id']);
+        } else {
+          $menuRouters = dbGetRouters($_SESSION['user_id']);
+        }
         foreach ($menuRouters as $mr) {
           $sesname = $mr['session_name'];
           if ($sesname == $session) {
